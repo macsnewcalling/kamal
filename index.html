@@ -1,0 +1,326 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShieldAlert, ShieldCheck, Bug, User, Mail, Phone, IdCard, Globe, Play, Square, Terminal, Cpu } from "lucide-react";
+
+export default function HackerScanPro() {
+  // --- FORM STATE ---
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [ssn, setSsn] = useState("");
+  const [ip, setIp] = useState("");
+
+  // --- SCAN STATE ---
+  const DURATION_MS = 120000; // 2 minutes
+  const [scanning, setScanning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [lines, setLines] = useState<string[]>([]);
+  const [resultsReady, setResultsReady] = useState(false);
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const tickerRef = useRef<number | null>(null);
+  const progressRef = useRef<number | null>(null);
+  const startAtRef = useRef<number>(0);
+
+  // --- GENERATED HACKER DATA ---
+  const countries = [
+    "Russia", "China", "North Korea", "USA", "Brazil", "Germany", "India",
+    "Pakistan", "Ukraine", "Iran", "Romania", "Vietnam", "Indonesia",
+    "Turkey", "Mexico", "South Africa", "France", "UK", "Spain", "Italy"
+  ];
+  const firstNames = [
+    "Zero", "Shadow", "Nova", "Cipher", "Viper", "Hex", "Ghost", "Rogue",
+    "Vector", "Spectre", "Echo", "Blade", "Nexus", "Drake", "Scarab",
+    "Glitch", "Phantom", "Krait", "Axel", "Nyx", "Raven", "Kael", "Jinx"
+  ];
+  const lastNames = [
+    "Hunter", "Breaker", "Sable", "Skye", "Void", "Impulse", "Flux",
+    "Strider", "Ash", "Hollow", "Crypt", "Pulse", "Fang", "Kane", "Night"
+  ];
+
+  const randomIp = () =>
+    Array.from({ length: 4 }, () => Math.floor(Math.random() * 256)).join(".");
+
+  const randomHex = (len = 16) =>
+    Array.from({ length: len }, () => Math.floor(Math.random() * 16).toString(16)).join("").toUpperCase();
+
+  const timeStamp = () => new Date().toLocaleTimeString();
+
+  const hackerList = useMemo(() => {
+    const list = Array.from({ length: 30 }, () => ({
+      name: `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${
+        lastNames[Math.floor(Math.random() * lastNames.length)]
+      }`,
+      country: countries[Math.floor(Math.random() * countries.length)],
+      ip: randomIp(),
+    }));
+    return list;
+  }, []);
+
+  // --- SCAN ENGINE ---
+  const startScan = () => {
+    if (scanning) return;
+    setResultsReady(false);
+    setScanning(true);
+    setLines([]);
+    setProgress(0);
+    startAtRef.current = performance.now();
+
+    // Progress loop
+    const progressLoop = () => {
+      const elapsed = performance.now() - startAtRef.current;
+      const pct = Math.min(100, (elapsed / DURATION_MS) * 100);
+      setProgress(pct);
+      if (pct >= 100) {
+        cancelAnimationFrame(progressRef.current!);
+        // allow last burst of lines
+        setTimeout(() => {
+          setScanning(false);
+          setResultsReady(true);
+        }, 600);
+      } else {
+        progressRef.current = requestAnimationFrame(progressLoop);
+      }
+    };
+    progressRef.current = requestAnimationFrame(progressLoop);
+
+    // Ticker for terminal lines
+    tickerRef.current = window.setInterval(() => {
+      setLines(prev => {
+        const burst = Array.from({ length: 6 }, () =>
+          `[${timeStamp()}] [SCAN#${randomHex(6)}] SRC:${randomIp()} → DST:${
+            ip || randomIp()
+          } | SIG:${randomHex(8)} | STATUS: ${Math.random() > 0.5 ? "OK" : "WARN"}`
+        );
+        const next = [...prev, ...burst];
+        return next.slice(-1200); // keep last N lines for performance
+      });
+    }, 80);
+  };
+
+  const stopScan = () => {
+    if (!scanning) return;
+    setScanning(false);
+    setProgress(0);
+    if (tickerRef.current) window.clearInterval(tickerRef.current);
+    if (progressRef.current) cancelAnimationFrame(progressRef.current);
+  };
+
+  // Auto-scroll terminal
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [lines]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (tickerRef.current) window.clearInterval(tickerRef.current);
+      if (progressRef.current) cancelAnimationFrame(progressRef.current);
+    };
+  }, []);
+
+  // Utility UI bits
+  const Stat = ({ icon: Icon, label, value }: any) => (
+    <div className="flex items-center gap-3 bg-neutral-900/70 border border-neutral-800 rounded-2xl px-4 py-3 shadow-inner">
+      <Icon className="h-5 w-5" />
+      <div className="text-sm opacity-80">{label}</div>
+      <div className="ml-auto text-lg font-semibold">{value}</div>
+    </div>
+  );
+
+  const Label = ({ children }: { children: React.ReactNode }) => (
+    <label className="text-xs uppercase tracking-wider opacity-70">{children}</label>
+  );
+
+  return (
+    <div className="min-h-screen w-full bg-black text-green-400 selection:bg-green-500/30">
+      {/* Glowing grid background */}
+      <div className="pointer-events-none fixed inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,rgba(16,185,129,.3)_1px,transparent_0)] [background-size:20px_20px]"></div>
+
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <Terminal className="h-7 w-7" />
+          <motion.h1
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="text-2xl md:text-3xl font-extrabold tracking-tight"
+          >
+            MICROSOFT® CMD – SECURITY INTELLISCAN
+          </motion.h1>
+          <div className="ml-auto flex items-center gap-2 text-xs">
+            <Cpu className="h-4 w-4" /> v1.0.0
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* LEFT: FORM + SUMMARY */}
+          <div className="space-y-4">
+            <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-5 shadow-lg shadow-green-500/10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label>Name</Label>
+                  <div className="flex items-center gap-2 bg-black/60 border border-green-900/40 rounded-xl px-3 py-2 focus-within:border-green-400/60">
+                    <User className="h-4 w-4" />
+                    <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Jin" className="bg-transparent outline-none w-full" />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>Email</Label>
+                  <div className="flex items-center gap-2 bg-black/60 border border-green-900/40 rounded-xl px-3 py-2 focus-within:border-green-400/60">
+                    <Mail className="h-4 w-4" />
+                    <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@domain.com" className="bg-transparent outline-none w-full" />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>Phone</Label>
+                  <div className="flex items-center gap-2 bg-black/60 border border-green-900/40 rounded-xl px-3 py-2 focus-within:border-green-400/60">
+                    <Phone className="h-4 w-4" />
+                    <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+91-XXXXXXXXXX" className="bg-transparent outline-none w-full" />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>SSN / ID</Label>
+                  <div className="flex items-center gap-2 bg-black/60 border border-green-900/40 rounded-xl px-3 py-2 focus-within:border-green-400/60">
+                    <IdCard className="h-4 w-4" />
+                    <input value={ssn} onChange={e => setSsn(e.target.value)} placeholder="####-####-####" className="bg-transparent outline-none w-full" />
+                  </div>
+                </div>
+                <div className="sm:col-span-2 flex flex-col gap-2">
+                  <Label>Target IP</Label>
+                  <div className="flex items-center gap-2 bg-black/60 border border-green-900/40 rounded-xl px-3 py-2 focus-within:border-green-400/60">
+                    <Globe className="h-4 w-4" />
+                    <input value={ip} onChange={e => setIp(e.target.value)} placeholder="192.168.1.10" className="bg-transparent outline-none w-full" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center gap-3">
+                <button
+                  onClick={startScan}
+                  disabled={scanning}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/20 border border-green-500/50 hover:bg-green-500/30 transition disabled:opacity-50"
+                >
+                  <Play className="h-4 w-4" /> Start Scan
+                </button>
+                <button
+                  onClick={stopScan}
+                  disabled={!scanning}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/40 hover:bg-red-500/20 transition disabled:opacity-50"
+                >
+                  <Square className="h-4 w-4" /> Stop
+                </button>
+                <button
+                  onClick={() => { setResultsReady(true); setScanning(false); setProgress(100); }}
+                  className="ml-auto text-xs underline opacity-70 hover:opacity-100"
+                >Skip to results</button>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Stat icon={ShieldAlert} label="Security Level" value={<span className="text-yellow-300 font-bold">9%</span>} />
+              <Stat icon={Bug} label="Virus Found" value={<span className="font-bold">21</span>} />
+              <Stat icon={ShieldCheck} label="Hackers Found" value={<span className="font-bold">234</span>} />
+              <Stat icon={Globe} label="Target" value={<span className="font-mono">{ip || "—"}</span>} />
+            </div>
+
+            {/* Submitted details card */}
+            <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-5">
+              <div className="text-sm opacity-70 mb-2">Submitted Details</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div><span className="opacity-50">Name: </span><span className="font-mono">{name || "—"}</span></div>
+                <div><span className="opacity-50">Email: </span><span className="font-mono">{email || "—"}</span></div>
+                <div><span className="opacity-50">Phone: </span><span className="font-mono">{phone || "—"}</span></div>
+                <div><span className="opacity-50">SSN/ID: </span><span className="font-mono">{ssn || "—"}</span></div>
+                <div className="sm:col-span-2"><span className="opacity-50">IP: </span><span className="font-mono">{ip || "—"}</span></div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: TERMINAL */}
+          <div className="bg-neutral-950 border border-neutral-800 rounded-2xl overflow-hidden shadow-lg shadow-green-500/10">
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-neutral-800 bg-black/60">
+              <div className="flex gap-1.5">
+                <span className="h-3 w-3 rounded-full bg-red-500/70"></span>
+                <span className="h-3 w-3 rounded-full bg-yellow-500/70"></span>
+                <span className="h-3 w-3 rounded-full bg-green-500/70"></span>
+              </div>
+              <div className="ml-3 text-xs opacity-70 font-mono">C:\\Windows\\System32\\cmd.exe</div>
+              <div className="ml-auto text-xs">{scanning ? "RUNNING" : resultsReady ? "COMPLETE" : "IDLE"}</div>
+            </div>
+
+            {/* Progress */}
+            <div className="h-1 bg-neutral-900">
+              <div className="h-full bg-green-500" style={{ width: `${progress}%`, transition: "width .25s linear" }} />
+            </div>
+
+            {/* Terminal body */}
+            <div ref={scrollRef} className="h-[480px] md:h-[560px] p-4 font-mono text-sm leading-6 overflow-auto [scrollbar-color:theme(colors.green.500)_transparent]">
+              {!resultsReady && (
+                <>
+                  <div className="opacity-60">Microsoft Windows [Version 10.0.22631]</div>
+                  <div className="opacity-60">(c) Microsoft Corporation. All rights reserved.</div>
+                  <div className="mt-3">C:\\Users\\{name || "User"}&gt; SECURESCAN /TARGET {ip || "0.0.0.0"} /DEEP /AI</div>
+                  <div className="mt-2">[+] Initializing AI modules… OK</div>
+                  <div>[+] Building threat graph… OK</div>
+                  <div>[+] Starting deep scan…</div>
+                  <div className="mt-2 whitespace-pre-wrap">
+                    {lines.map((l, i) => (
+                      <div key={i}>{l}</div>
+                    ))}
+                  </div>
+                  {scanning && (
+                    <div className="mt-2 animate-pulse">&gt; Processing packets █{""}</div>
+                  )}
+                </>
+              )}
+
+              {/* RESULTS */}
+              <AnimatePresence>
+                {resultsReady && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-3"
+                  >
+                    <div className="text-lg font-bold text-green-300">=== SCAN REPORT ===</div>
+                    <div className="opacity-80">Threat actors detected: <span className="font-bold">234</span></div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {hackerList.map((h, idx) => (
+                        <div key={idx} className="bg-black/50 border border-green-900/40 rounded-xl p-3">
+                          <div className="text-sm"><span className="opacity-60">Hacker:</span> <span className="font-semibold">{h.name}</span></div>
+                          <div className="text-sm"><span className="opacity-60">Country:</span> {h.country}</div>
+                          <div className="text-sm"><span className="opacity-60">IP:</span> <span className="font-mono">{h.ip}</span></div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="opacity-70 text-sm">… and 204 more entries hidden.</div>
+
+                    <div className="mt-4">
+                      <div>[!] SECURITY LEVEL: <span className="text-yellow-300 font-bold">9%</span></div>
+                      <div>[!] VIRUS FOUND: <span className="font-bold">21</span></div>
+                      <div>[!] HACKERS FOUND: <span className="font-bold">234</span></div>
+                    </div>
+
+                    <div className="mt-4">C:\\Users\\{name || "User"}&gt; _</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer note */}
+        <div className="mt-6 text-xs opacity-60 text-center">
+          This is a visual simulation for demos & fun. It does not perform real security scanning.
+        </div>
+      </div>
+    </div>
+  );
+}
